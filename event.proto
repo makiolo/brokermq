@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package zeromq_project.proto;
+
+message Mutation {
+  int32 id = 1;
+  string name = 2;
+  string origin = 3;
+  map<string, string> metadata = 4;
+}
+
+message Response {
+  int32 code = 1;
+  string body = 2;
+}
