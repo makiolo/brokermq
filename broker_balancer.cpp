@@ -1,3 +1,4 @@
+
 //  Least-recently used (LRU) queue device
 //  Clients and workers are shown here in-process
 //
@@ -5,6 +6,7 @@
 #include "zhelpers.hpp"
 #include <thread>
 #include <queue>
+#include <fmt/core.h>
 
 //  Basic request-reply client using REQ socket
 //
@@ -18,8 +20,13 @@ void client_thread(int id) {
     zmq::context_t context(1);
     zmq::socket_t client(context, ZMQ_REQ);
 
-    s_set_id(client);
-    client.connect("tcp://localhost:5672"); // frontend
+#if (defined (WIN32))
+    s_set_id(client, id);
+    client.connect("tcp://localhost:5001"); // frontend
+#else
+    s_set_id(client); // Set a printable identity
+    client.connect("ipc://frontend.ipc");
+#endif
 
     //  Send request, get reply
     s_send(client, std::string("HELLO"));
@@ -35,7 +42,7 @@ void worker_thread(int id) {
     zmq::socket_t worker(context, ZMQ_REQ);
 
     s_set_id(worker);
-    worker.connect("tcp://localhost:5673"); // backend
+    worker.connect("tcp://localhost:5000"); // backend
 
     //  Tell backend we're ready for work
     s_send(worker, std::string("READY"));
@@ -60,26 +67,24 @@ void worker_thread(int id) {
 
 int main(int argc, char *argv[])
 {
-
     //  Prepare our context and sockets
     zmq::context_t context(1);
-    zmq::socket_t frontend(context, ZMQ_ROUTER);
-    zmq::socket_t backend(context, ZMQ_ROUTER);
+    zmq::socket_t frontend(context, ZMQ_DEALER);
+    zmq::socket_t backend(context, ZMQ_DEALER);
 
-    frontend.bind("tcp://*:5672"); // frontend
-    backend.bind("tcp://*:5673"); // backend
+    s_set_id(frontend);
+    s_set_id(backend);
 
-    int client_nbr = 0;
-    for (; client_nbr < 10; client_nbr++) {
-        std::thread t(client_thread, client_nbr);
-        t.detach();
-    }
-    for (int worker_nbr = 0; worker_nbr < 3; worker_nbr++) {
-        std::thread t (worker_thread, worker_nbr);
-        t.detach();
-    }
+    frontend.bind("tcp://*:5000"); // frontend
+    backend.bind("tcp://*:5001"); // backend
+
+    fmt::println("backend id: {}", backend.get(zmq::sockopt::routing_id));
+    fmt::println("frontend id: {}", frontend.get(zmq::sockopt::routing_id));
+
+    fmt::print("Broker LRU started in 5000 & 5001.\n");
+
     //  Logic of LRU loop
-    //  - Poll backend always, frontend only if 1+ worker ready
+    //  - Poll backend always, frontend only if 1 or >1 worker ready
     //  - If worker replies, queue worker as ready and forward reply
     //    to client if necessary
     //  - If client requests, pop next worker and send request to it
@@ -96,17 +101,17 @@ int main(int argc, char *argv[])
                 //  Poll front-end only if we have available workers
                 { frontend, 0, ZMQ_POLLIN, 0 }
         };
-        if (worker_queue.size())
+        if (!worker_queue.empty())
             zmq::poll(&items[0], 2, -1);
         else
             zmq::poll(&items[0], 1, -1);
 
-        //  Handle worker activity on backend
+        //  receive replies from workers
         if (items[0].revents & ZMQ_POLLIN) {
 
             //  Queue worker address for LRU routing
-            worker_queue.push(s_recv(backend));
-            receive_empty_message(backend);
+            auto backend_id = backend.get(zmq::sockopt::routing_id);
+            worker_queue.push(backend_id);
 
             //  Third frame is READY or else a client reply address
             std::string client_addr = s_recv(backend);
@@ -118,33 +123,21 @@ int main(int argc, char *argv[])
                 s_sendmore(frontend, client_addr);
                 s_sendmore(frontend, std::string(""));
                 s_send(frontend, reply);
-
-                if (--client_nbr == 0)
-                    break;
             }
         }
         if (items[1].revents & ZMQ_POLLIN) {
 
-            //  Now get next client request, route to LRU worker
-            //  Client request is [address][empty][request]
-            std::string client_addr = s_recv(frontend);
-
-            {
-                std::string empty = s_recv(frontend);
-                assert(empty.size() == 0);
-            }
-
             std::string request = s_recv(frontend);
 
-            std::string worker_addr = worker_queue.front();//worker_queue [0];
+            std::string worker_addr = worker_queue.front();
             worker_queue.pop();
 
-            s_sendmore(backend, worker_addr);
-            s_sendmore(backend, std::string(""));
-            s_sendmore(backend, client_addr);
+            auto frontend_id = backend.get(zmq::sockopt::routing_id);
+            s_sendmore(backend, frontend_id);
             s_sendmore(backend, std::string(""));
             s_send(backend, request);
         }
     }
     return 0;
 }
+

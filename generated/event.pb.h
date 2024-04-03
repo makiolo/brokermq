@@ -222,12 +222,16 @@ class Mutation final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kMetadataFieldNumber = 4,
+    kMetadataFieldNumber = 8,
     kNameFieldNumber = 2,
     kOriginFieldNumber = 3,
+    kDestinationFieldNumber = 4,
     kIdFieldNumber = 1,
+    kAgeFieldNumber = 5,
+    kYearFieldNumber = 6,
+    kYear2FieldNumber = 7,
   };
-  // map<string, string> metadata = 4;
+  // map<string, string> metadata = 8;
   int metadata_size() const;
   private:
   int _internal_metadata_size() const;
@@ -272,6 +276,20 @@ class Mutation final :
   std::string* _internal_mutable_origin();
   public:
 
+  // string destination = 4;
+  void clear_destination();
+  const std::string& destination() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_destination(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_destination();
+  PROTOBUF_NODISCARD std::string* release_destination();
+  void set_allocated_destination(std::string* destination);
+  private:
+  const std::string& _internal_destination() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_destination(const std::string& value);
+  std::string* _internal_mutable_destination();
+  public:
+
   // int32 id = 1;
   void clear_id();
   int32_t id() const;
@@ -279,6 +297,33 @@ class Mutation final :
   private:
   int32_t _internal_id() const;
   void _internal_set_id(int32_t value);
+  public:
+
+  // int32 age = 5;
+  void clear_age();
+  int32_t age() const;
+  void set_age(int32_t value);
+  private:
+  int32_t _internal_age() const;
+  void _internal_set_age(int32_t value);
+  public:
+
+  // int32 year = 6;
+  void clear_year();
+  int32_t year() const;
+  void set_year(int32_t value);
+  private:
+  int32_t _internal_year() const;
+  void _internal_set_year(int32_t value);
+  public:
+
+  // int32 year2 = 7;
+  void clear_year2();
+  int32_t year2() const;
+  void set_year2(int32_t value);
+  private:
+  int32_t _internal_year2() const;
+  void _internal_set_year2(int32_t value);
   public:
 
   // @@protoc_insertion_point(class_scope:zeromq_project.proto.Mutation)
@@ -296,7 +341,11 @@ class Mutation final :
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING> metadata_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr name_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr origin_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr destination_;
     int32_t id_;
+    int32_t age_;
+    int32_t year_;
+    int32_t year2_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -427,6 +476,7 @@ class Response final :
   enum : int {
     kBodyFieldNumber = 2,
     kCodeFieldNumber = 1,
+    kAgeFieldNumber = 3,
   };
   // string body = 2;
   void clear_body();
@@ -451,6 +501,15 @@ class Response final :
   void _internal_set_code(int32_t value);
   public:
 
+  // int32 age = 3;
+  void clear_age();
+  int32_t age() const;
+  void set_age(int32_t value);
+  private:
+  int32_t _internal_age() const;
+  void _internal_set_age(int32_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:zeromq_project.proto.Response)
  private:
   class _Internal;
@@ -461,6 +520,7 @@ class Response final :
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr body_;
     int32_t code_;
+    int32_t age_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -599,7 +659,117 @@ inline void Mutation::set_allocated_origin(std::string* origin) {
   // @@protoc_insertion_point(field_set_allocated:zeromq_project.proto.Mutation.origin)
 }
 
-// map<string, string> metadata = 4;
+// string destination = 4;
+inline void Mutation::clear_destination() {
+  _impl_.destination_.ClearToEmpty();
+}
+inline const std::string& Mutation::destination() const {
+  // @@protoc_insertion_point(field_get:zeromq_project.proto.Mutation.destination)
+  return _internal_destination();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void Mutation::set_destination(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.destination_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:zeromq_project.proto.Mutation.destination)
+}
+inline std::string* Mutation::mutable_destination() {
+  std::string* _s = _internal_mutable_destination();
+  // @@protoc_insertion_point(field_mutable:zeromq_project.proto.Mutation.destination)
+  return _s;
+}
+inline const std::string& Mutation::_internal_destination() const {
+  return _impl_.destination_.Get();
+}
+inline void Mutation::_internal_set_destination(const std::string& value) {
+  
+  _impl_.destination_.Set(value, GetArenaForAllocation());
+}
+inline std::string* Mutation::_internal_mutable_destination() {
+  
+  return _impl_.destination_.Mutable(GetArenaForAllocation());
+}
+inline std::string* Mutation::release_destination() {
+  // @@protoc_insertion_point(field_release:zeromq_project.proto.Mutation.destination)
+  return _impl_.destination_.Release();
+}
+inline void Mutation::set_allocated_destination(std::string* destination) {
+  if (destination != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.destination_.SetAllocated(destination, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.destination_.IsDefault()) {
+    _impl_.destination_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:zeromq_project.proto.Mutation.destination)
+}
+
+// int32 age = 5;
+inline void Mutation::clear_age() {
+  _impl_.age_ = 0;
+}
+inline int32_t Mutation::_internal_age() const {
+  return _impl_.age_;
+}
+inline int32_t Mutation::age() const {
+  // @@protoc_insertion_point(field_get:zeromq_project.proto.Mutation.age)
+  return _internal_age();
+}
+inline void Mutation::_internal_set_age(int32_t value) {
+  
+  _impl_.age_ = value;
+}
+inline void Mutation::set_age(int32_t value) {
+  _internal_set_age(value);
+  // @@protoc_insertion_point(field_set:zeromq_project.proto.Mutation.age)
+}
+
+// int32 year = 6;
+inline void Mutation::clear_year() {
+  _impl_.year_ = 0;
+}
+inline int32_t Mutation::_internal_year() const {
+  return _impl_.year_;
+}
+inline int32_t Mutation::year() const {
+  // @@protoc_insertion_point(field_get:zeromq_project.proto.Mutation.year)
+  return _internal_year();
+}
+inline void Mutation::_internal_set_year(int32_t value) {
+  
+  _impl_.year_ = value;
+}
+inline void Mutation::set_year(int32_t value) {
+  _internal_set_year(value);
+  // @@protoc_insertion_point(field_set:zeromq_project.proto.Mutation.year)
+}
+
+// int32 year2 = 7;
+inline void Mutation::clear_year2() {
+  _impl_.year2_ = 0;
+}
+inline int32_t Mutation::_internal_year2() const {
+  return _impl_.year2_;
+}
+inline int32_t Mutation::year2() const {
+  // @@protoc_insertion_point(field_get:zeromq_project.proto.Mutation.year2)
+  return _internal_year2();
+}
+inline void Mutation::_internal_set_year2(int32_t value) {
+  
+  _impl_.year2_ = value;
+}
+inline void Mutation::set_year2(int32_t value) {
+  _internal_set_year2(value);
+  // @@protoc_insertion_point(field_set:zeromq_project.proto.Mutation.year2)
+}
+
+// map<string, string> metadata = 8;
 inline int Mutation::_internal_metadata_size() const {
   return _impl_.metadata_.size();
 }
@@ -700,6 +870,26 @@ inline void Response::set_allocated_body(std::string* body) {
   }
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:zeromq_project.proto.Response.body)
+}
+
+// int32 age = 3;
+inline void Response::clear_age() {
+  _impl_.age_ = 0;
+}
+inline int32_t Response::_internal_age() const {
+  return _impl_.age_;
+}
+inline int32_t Response::age() const {
+  // @@protoc_insertion_point(field_get:zeromq_project.proto.Response.age)
+  return _internal_age();
+}
+inline void Response::_internal_set_age(int32_t value) {
+  
+  _impl_.age_ = value;
+}
+inline void Response::set_age(int32_t value) {
+  _internal_set_age(value);
+  // @@protoc_insertion_point(field_set:zeromq_project.proto.Response.age)
 }
 
 #ifdef __GNUC__
