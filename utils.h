@@ -21,39 +21,49 @@ void receive_empty_message(zmq::socket_t& sock)
 
 namespace protomq {
 
-void send_message(zmq::socket_t& socket, const google::protobuf::Message &message, bool more = false, bool wait = false) {
+void send_message(zmq::socket_t& socket, const google::protobuf::Message &message, bool more = false, bool wait = false)
+{
     std::string str;
     message.SerializeToString(&str);
 
     // TODO: al crear el buffer, se copia el string, se puede evitar?
-
     socket.send(zmq::buffer(str), more ? zmq::send_flags::sndmore : wait ? zmq::send_flags::none : zmq::send_flags::dontwait);
-    // fmt::print("Sent message: {}\n", message.DebugString());
+
+#ifdef DEBUG
+    fmt::print("Sent proto\n");
+#endif
 }
 
-void recv_message(zmq::socket_t& socket, google::protobuf::Message &message, bool wait = true) {
+void recv_message(zmq::socket_t& socket, google::protobuf::Message &message, bool wait = true)
+{
     zmq::message_t result; // result{};
     socket.recv(result, wait ? zmq::recv_flags::none : zmq::recv_flags::dontwait);
     message.ParseFromArray(result.data(), (int)result.size());
-    // fmt::print("Received message: {}\n", message.DebugString());
+#ifdef DEBUG
+    fmt::print("Received proto.\n");
+#endif
 }
 
 void recv_message_all(zmq::socket_t& socket, std::vector<zeromq_project::proto::Response>& responses, int expected)
 {
     int i = 0;
     while (true) {
-        zeromq_project::proto::Response response;
-        recv_message(socket, response);
-        responses.push_back(response);
-
-        ++i;
         if(i >= expected)
         {
             int more = socket.get(zmq::sockopt::rcvmore);
             if (!more)
                 break;
         }
+
+        zeromq_project::proto::Response response;
+        recv_message(socket, response);
+        responses.push_back(response);
+
+        ++i;
     }
+#ifdef DEBUG
+    fmt::print("Recv all messages. Total: {}.\n", i);
+#endif
 }
 
 void message_to_json(const google::protobuf::Message &message, std::string &data) {

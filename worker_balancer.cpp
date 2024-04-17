@@ -11,50 +11,65 @@
 //
 int main() {
 
+    srand(time(NULL));
+
     zmq::context_t context(1);
-    zmq::socket_t worker(context, zmq::socket_type::dealer);
+    zmq::socket_t frontend(context, zmq::socket_type::dealer);
     zmq::socket_t backend(context, zmq::socket_type::dealer);
 
-    s_set_id(worker);
-    s_set_id(backend);
+    s_set_id(frontend, "worker-balancer-frontend");
+    s_set_id(backend, "worker-balancer-backend");
 
-    fmt::println("worker id: {}", worker.get(zmq::sockopt::routing_id));
+    fmt::println("frontend id: {}", frontend.get(zmq::sockopt::routing_id));
     fmt::println("backend id: {}", backend.get(zmq::sockopt::routing_id));
 
-    worker.connect("tcp://localhost:5001"); // backend
-    backend.connect("tcp://localhost:5002"); // frontend
+    frontend.connect("tcp://localhost:5001");
+    backend.connect("tcp://localhost:5002");
 
-    fmt::print("Worker connected to 5001 & 5002.\n");
+    fmt::print("frontend connected to 5001 & 5002.\n");
+
+    //  Tell backend we're ready for work
+    s_send(frontend, std::string("READY"));
 
     while (true) {
 
-        //  Tell backend we're ready for work
-        s_send(worker, std::string("READY"));
+        // si el frontend tiene cola de tamaño 10
+        // recibe 10 mensajes y envia 10 mensajes y recibe 10 respuestas y envia 10 respuestas
 
-        // get header + Request
-        std::string address = s_recv(worker);
-        receive_empty_message(worker);
-        zeromq_project::proto::Mutation mutation;
-        protomq::recv_message(worker, mutation);
-        // fmt::println("received message: {}", mutation.DebugString());
+        int total = 0;
+        const int max_batch = 1; // number nodes to connected rpc broker
+        std::vector<std::string> client_addresses;
+        while(total < max_batch) {
+            // get header + Request
+            client_addresses.emplace_back( s_recv(frontend) );
+            receive_empty_message(frontend);
+            zeromq_project::proto::Mutation mutation;
+            protomq::recv_message(frontend, mutation, true);
 
-        // RPC to frontend
-        // fmt::println("send ... {}", mutation.DebugString());
-        protomq::send_message(backend, mutation);
-        // fmt::println("sent.");
+            // RPC to frontend
+            protomq::send_message(backend, mutation);
 
-        zeromq_project::proto::Response response;
-        // fmt::println("recv ...");
-        protomq::recv_message(backend, response);
-        // fmt::println("recv. Forward to RPC. message: {}", response.DebugString());
+            // more in socket ?
+            int more = frontend.get(zmq::sockopt::rcvmore);
+            if (!more)
+                break;
+            else
+                ++total;
+        }
 
-        // send Header + Response
-        s_sendmore(worker, address);
-        s_sendmore(worker, std::string(""));
-        protomq::send_message(worker, response);
-        // fmt::println("send response to parent");
+        // recv in same order to requests ?
 
-        // fmt::println(".");
+        for(int i=0; i < total; ++i)
+        {
+            zeromq_project::proto::Response response;
+            protomq::recv_message(backend, response);
+
+            // send Header + Response (implicit READY)
+            s_sendmore(frontend, client_addresses[i]);
+            s_sendmore(frontend, std::string(""));
+            fmt::println("sent ticket id {}.", response.ticket_id());
+            protomq::send_message(frontend, response);
+        }
     }
     return 0;
 }

@@ -6,20 +6,22 @@ package zeromq_project.proto;
 // https://cloud.google.com/spanner/docs/reference/rpc/google.spanner.v1#google.spanner.v1.Mutation
 //
 message Mutation {
-  int32 id = 1;
-  string name = 2;
-  string origin = 3;
-  string destination = 4;
-  int32 age = 5;
-  int32 year = 6;
-  int32 year2 = 7;
-  map<string, string> metadata = 8;
+  int32 ticket_id = 1;
+  int32 id = 2;
+  string name = 3;
+  string origin = 4;
+  string destination = 5;
+  int32 age = 6;
+  int32 year = 7;
+  int32 year2 = 8;
+  map<string, string> metadata = 9;
 }
 
 message Response {
-  int32 code = 1;
-  string body = 2;
-  int32 age = 3;
+  int32 ticket_id = 1;
+  int32 code = 2;
+  string body = 3;
+  int32 age = 4;
 }
 
 /*

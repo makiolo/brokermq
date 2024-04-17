@@ -67,19 +67,20 @@ void worker_thread(int id) {
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
     //  Prepare our context and sockets
     zmq::context_t context(1);
-    zmq::socket_t frontend(context, ZMQ_DEALER);
-    zmq::socket_t backend(context, ZMQ_DEALER);
+    zmq::socket_t frontend(context, zmq::socket_type::router);
+    zmq::socket_t backend(context, zmq::socket_type::router);
 
-    s_set_id(frontend);
-    s_set_id(backend);
+    s_set_id(frontend, "broker-balancer-frontend");
+    s_set_id(backend, "broker-balancer-backend");
 
     frontend.bind("tcp://*:5000"); // frontend
     backend.bind("tcp://*:5001"); // backend
 
-    fmt::println("backend id: {}", backend.get(zmq::sockopt::routing_id));
     fmt::println("frontend id: {}", frontend.get(zmq::sockopt::routing_id));
+    fmt::println("backend id: {}", backend.get(zmq::sockopt::routing_id));
 
     fmt::print("Broker LRU started in 5000 & 5001.\n");
 
@@ -110,30 +111,45 @@ int main(int argc, char *argv[])
         if (items[0].revents & ZMQ_POLLIN) {
 
             //  Queue worker address for LRU routing
-            auto backend_id = backend.get(zmq::sockopt::routing_id);
-            worker_queue.push(backend_id);
+            std::string balancer_addr = s_recv(backend);
+            worker_queue.push(balancer_addr);
 
             //  Third frame is READY or else a client reply address
             std::string client_addr = s_recv(backend);
 
             //  If client reply, send rest back to frontend
             if (client_addr.compare("READY") != 0) {
+
+#ifdef DEBUG
+                fmt::println("Received worker response from {}.", client_addr);
+#endif
+
                 receive_empty_message(backend);
                 std::string reply = s_recv(backend);
+                //
+                // s_sendmore(frontend, client_addr);
                 s_sendmore(frontend, client_addr);
                 s_sendmore(frontend, std::string(""));
                 s_send(frontend, reply);
             }
+#ifdef DEBUG
+            else
+            {
+                fmt::println("Received worker {} ready.", balancer_addr);
+            }
+#endif
         }
         if (items[1].revents & ZMQ_POLLIN) {
 
+            std::string source = s_recv(frontend);
+            receive_empty_message(frontend);
             std::string request = s_recv(frontend);
 
             std::string worker_addr = worker_queue.front();
             worker_queue.pop();
 
-            auto frontend_id = backend.get(zmq::sockopt::routing_id);
-            s_sendmore(backend, frontend_id);
+            s_sendmore(backend, worker_addr);
+            s_sendmore(backend, source);
             s_sendmore(backend, std::string(""));
             s_send(backend, request);
         }

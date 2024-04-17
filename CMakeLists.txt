@@ -51,6 +51,9 @@ set(PROTOCOL_FILES
 )
 
 
+add_compile_definitions(DEBUG=1)
+
+
 add_executable(client)
 target_sources(client PRIVATE client.cpp ${PROTOCOL_FILES})
 target_include_directories(client PRIVATE ${COMMON_INCLUDES})

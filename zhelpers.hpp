@@ -4,6 +4,7 @@
 //  Include a bunch of headers that we will need in the examples
 
 #include <zmq.hpp> // https://github.com/zeromq/cppzmq
+#include <fmt/core.h>
 
 #include <iostream>
 #include <iomanip>
@@ -89,6 +90,9 @@ s_recv(void *socket, int flags = 0) {
     memcpy(string, zmq_msg_data(&message), size);
     zmq_msg_close(&message);
     string[size] = 0;
+#ifdef DEBUG
+    fmt::println("Received message: \"{}\".", string);
+#endif
     return (string);
 }
 
@@ -100,7 +104,11 @@ s_recv (zmq::socket_t & socket, int flags = 0) {
     auto recv_flags = (flags ==0)? zmq::recv_flags::none: zmq::recv_flags::dontwait;
     (void)socket.recv(message, recv_flags);
 
-    return std::string(static_cast<char*>(message.data()), message.size());
+    auto data = std::string(static_cast<char*>(message.data()), message.size());
+#ifdef DEBUG
+    fmt::println("Received message: \"{}\".", data);
+#endif
+    return data;
 }
 
 inline static bool s_recv(zmq::socket_t & socket, std::string & ostring, int flags = 0)
@@ -108,7 +116,6 @@ inline static bool s_recv(zmq::socket_t & socket, std::string & ostring, int fla
     zmq::message_t message;
     auto recv_flags = (flags ==0)? zmq::recv_flags::none: zmq::recv_flags::dontwait;
     auto rc = socket.recv(message, recv_flags);
-
 
     if (rc) {
         ostring = std::string(static_cast<char*>(message.data()), message.size());
@@ -125,6 +132,11 @@ s_send(void *socket, const char *string, int flags = 0) {
     zmq_msg_t message;
     zmq_msg_init_size(&message, strlen(string));
     memcpy(zmq_msg_data(&message), string, strlen(string));
+
+#ifdef DEBUG
+    fmt::println("Sending message: {} and flush", string);
+#endif
+
     rc = zmq_msg_send(&message, socket, flags);
     assert(-1 != rc);
     zmq_msg_close(&message);
@@ -138,6 +150,10 @@ s_send (zmq::socket_t & socket, const std::string & string, int flags = 0) {
     zmq::message_t message(string.size());
     memcpy (message.data(), string.data(), string.size());
 
+#ifdef DEBUG
+    fmt::println("Sending message: {} and flush", string);
+#endif
+
     bool rc = socket.send (message, static_cast<zmq::send_flags>(flags)).has_value();
     return (rc);
 }
@@ -149,6 +165,11 @@ s_sendmore(void *socket, char *string) {
     zmq_msg_t message;
     zmq_msg_init_size(&message, strlen(string));
     memcpy(zmq_msg_data(&message), string, strlen(string));
+
+#ifdef DEBUG
+    fmt::println("Sending message: \"{}\" and more", string);
+#endif
+
     //rc = zmq_send(socket, string, strlen(string), ZMQ_SNDMORE);
     rc = zmq_msg_send(&message, socket, ZMQ_SNDMORE);
     assert(-1 != rc);
@@ -162,6 +183,10 @@ s_sendmore (zmq::socket_t & socket, const std::string & string) {
 
     zmq::message_t message(string.size());
     memcpy (message.data(), string.data(), string.size());
+
+#ifdef DEBUG
+    fmt::println("Sending message: \"{}\" and more", string);
+#endif
 
     bool rc = socket.send (message,   static_cast<zmq::send_flags>(ZMQ_SNDMORE)).has_value();
     return (rc);
@@ -210,6 +235,21 @@ s_dump (zmq::socket_t & socket)
     }
 }
 
+std::string gen_random(const int len) {
+    static const char alphanum[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+    std::string tmp_s;
+    tmp_s.reserve(len);
+
+    for (int i = 0; i < len; ++i) {
+        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+    }
+
+    return tmp_s;
+}
+
 #if (!defined (WIN32))
 //  Set simple random printable identity on socket
 //  Caution:
@@ -217,12 +257,12 @@ s_dump (zmq::socket_t & socket)
 //    since s_set_id will call rand() on MS Windows. rand(), however, is not
 //    reentrant or thread-safe. See issue #521.
 inline std::string
-s_set_id (zmq::socket_t & socket)
+s_set_id (zmq::socket_t & socket, const std::string& entropy = "")
 {
+
     std::stringstream ss;
     ss << std::hex << std::uppercase
-       << std::setw(4) << std::setfill('0') << within (0x10000) << "-"
-       << std::setw(4) << std::setfill('0') << within (0x10000);
+       << gen_random(10) << "-" << entropy;
     socket.set(zmq::sockopt::routing_id, ss.str().c_str());
     return ss.str();
 }
