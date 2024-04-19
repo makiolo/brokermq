@@ -4,13 +4,9 @@
 #include <fmt/core.h>
 #include <functional>
 #include <map>
-#include <fmt/core.h>
 
-//
-// Created by ricardo on 3/10/24.
-//
-int main() {
-
+int main()
+{
     srand(time(NULL));
 
     zmq::context_t context(1);
@@ -26,20 +22,21 @@ int main() {
     frontend.connect("tcp://localhost:5001");
     backend.connect("tcp://localhost:5002");
 
-    fmt::print("frontend connected to 5001 & 5002.\n");
+    fmt::println("frontend connected to 5001 & 5002.");
 
     //  Tell backend we're ready for work
     s_send(frontend, std::string("READY"));
 
-    while (true) {
-
+    while (true)
+    {
         // si el frontend tiene cola de tamaño 10
         // recibe 10 mensajes y envia 10 mensajes y recibe 10 respuestas y envia 10 respuestas
 
         int total = 0;
-        const int max_batch = 1; // number nodes to connected rpc broker
+        const int max_batch = 1;
         std::vector<std::string> client_addresses;
-        while(total < max_batch) {
+        while(total < max_batch)
+        {
             // get header + Request
             client_addresses.emplace_back( s_recv(frontend) );
             receive_empty_message(frontend);
@@ -49,12 +46,15 @@ int main() {
             // RPC to frontend
             protomq::send_message(backend, mutation);
 
+            /*
             // more in socket ?
             int more = frontend.get(zmq::sockopt::rcvmore);
             if (!more)
                 break;
             else
-                ++total;
+            */
+
+            ++total;
         }
 
         // recv in same order to requests ?
